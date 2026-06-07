@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forever Starts Here 💕</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&display=swap');
+
+  :root {
+    --rose: #e8446a;
+    --blush: #f7a8b8;
+    --deep: #8b1a3a;
+    --gold: #d4af37;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: radial-gradient(ellipse at 20% 20%, #1a0010 0%, #0d0005 40%, #000 100%);
+    min-height: 100vh;
+    overflow-x: hidden;
+    font-family: 'Cormorant Garamond', serif;
+    cursor: crosshair;
+  }
+
+  /* ── Canvas layers ── */
+  #petals-canvas  { position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5; }
+  #sparkle-canvas { position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:2; }
+  #particle-canvas{ position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:3; }
+
+  /* ── Stage ── */
+  #stage {
+    position:relative; z-index:10; min-height:100vh;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+  }
+
+  /* ── Title ── */
+  .title-wrap { text-align:center; padding:40px 20px 20px; }
+  .title-wrap h1 {
+    font-family:'Great Vibes',cursive;
+    font-size:clamp(2.5rem,7vw,5rem);
+    color:var(--gold);
+    text-shadow:0 0 30px rgba(212,175,55,.6),0 2px 4px rgba(0,0,0,.5);
+    letter-spacing:2px;
+  }
+  .subtitle {
+    font-style:italic; font-size:clamp(1rem,3vw,1.4rem);
+    color:var(--blush); opacity:.8; margin-top:6px; letter-spacing:3px;
+  }
+
+  /* ── Instruction ── */
+  #instruction {
+    font-style:italic; color:rgba(255,255,255,.55);
+    font-size:clamp(.85rem,2.5vw,1.1rem);
+    text-align:center; letter-spacing:2px; margin-bottom:10px;
+    transition:opacity .6s;
+  }
+
+  /* ── Balloon area ── */
+  #balloon-area {
+    display:flex; align-items:flex-end; justify-content:center;
+    gap:clamp(40px,10vw,140px); padding:20px 20px 0;
+    transition:gap 1.2s cubic-bezier(.4,0,.2,1);
+  }
+  #balloon-area.merging { gap:0!important; }
+
+  /* ── Single Balloon wrapper ── */
+  .balloon-wrap {
+    display:flex; flex-direction:column; align-items:center;
+    cursor:pointer;
+    transition:transform 1.2s cubic-bezier(.34,1.56,.64,1), opacity 1s;
+    user-select:none; -webkit-tap-highlight-color:transparent;
+  }
+  .balloon-wrap:hover .heart-balloon { filter:brightness(1.15) drop-shadow(0 0 20px var(--rose)); }
+
+  /* ── Heart balloon ── */
+  .heart-balloon {
+    width:clamp(130px,25vw,200px); height:clamp(130px,25vw,200px);
+    filter:drop-shadow(0 0 12px rgba(232,68,106,.5));
+    transition:filter .4s;
+    animation:floatBalloon 3s ease-in-out infinite;
+  }
+  .balloon-wrap:nth-child(2) .heart-balloon { animation-delay:.5s; }
+  @keyframes floatBalloon {
+    0%,100% { transform:translateY(0) rotate(-2deg); }
+    50%      { transform:translateY(-18px) rotate(2deg); }
+  }
+  .heart-svg { width:100%; height:100%; overflow:visible; }
+
+  /* Balloon string */
+  .string {
+    width:2px; height:clamp(60px,12vw,100px);
+    background:linear-gradient(to bottom,rgba(212,175,55,.8),rgba(212,175,55,.2));
+    border-radius:2px; margin-top:-2px; position:relative;
+  }
+  .string::after {
+    content:''; position:absolute; bottom:0; left:50%;
+    transform:translateX(-50%); width:8px; height:8px;
+    border-radius:50%; background:var(--gold);
+  }
+
+  /* ── Hint label ── */
+  .balloon-hint {
+    font-family:'Great Vibes',cursive; font-size:clamp(1rem,3vw,1.4rem);
+    color:var(--blush); margin-top:8px; opacity:.7; white-space:nowrap;
+  }
+
+  /* ── Photo reveal ── */
+  .photo-reveal { opacity:0; transition:opacity .8s ease; }
+  .photo-reveal.visible { opacity:1; }
+
+  /* ── Shimmer ── */
+  .heart-shimmer { animation:heartPulse 2s ease-in-out infinite; }
+  @keyframes heartPulse { 0%,100%{opacity:.15} 50%{opacity:.35} }
+
+  /* ── Together overlay — full screen, fully opaque ── */
+  #together-section {
+    position:fixed; top:0; left:0; width:100%; height:100%;
+    z-index:100;
+    display:none;           /* hidden until .show */
+    flex-direction:column;
+    align-items:center; justify-content:center;
+    background: #000;       /* solid black base — no bleed-through */
+  }
+  #together-section.show { display:flex; }
+
+  /* Dark rose radial glow on top of solid black */
+  #together-section::before {
+    content:'';
+    position:absolute; inset:0;
+    background:radial-gradient(ellipse at center, rgba(139,26,58,.6) 0%, transparent 70%);
+    pointer-events:none;
+  }
+
+  /* ── Heart + label wrapper — sits in flex center ── */
+  #heart-center {
+    position:relative;          /* orbit-ring is absolute inside this */
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    z-index:1;
+  }
+
+  /* Center mega heart */
+    #mega-heart {
+    position: relative;   /* ← add this */
+    z-index: 3;           /* ← add this — higher than orbit-ring's z-index:2 */
+    width:clamp(200px,38vw,340px); height:clamp(200px,38vw,340px);
+    filter:drop-shadow(0 0 40px rgba(232,68,106,.8));
+    animation:megaPulse 2s ease-in-out infinite;
+    transform:scale(0);
+    transition:transform 1s cubic-bezier(.34,1.56,.64,1) .3s;
+    flex-shrink:0;
+  }
+  #together-section.show #mega-heart { transform:scale(1); }
+  @keyframes megaPulse {
+    0%,100%{filter:drop-shadow(0 0 30px rgba(232,68,106,.7))}
+    50%{filter:drop-shadow(0 0 60px rgba(232,68,106,1))}
+  }
+
+  /* Together label */
+  #together-label {
+    font-family:'Great Vibes',cursive; font-size:clamp(1.8rem,5vw,3.5rem);
+    color:var(--gold); text-shadow:0 0 20px rgba(212,175,55,.6);
+    margin-top:16px; opacity:0; transform:translateY(20px);
+    transition:opacity .8s .6s, transform .8s .6s;
+    text-align:center; letter-spacing:3px;
+  }
+  #together-section.show #together-label { opacity:1; transform:none; }
+
+  /* Slideshow dots */
+  #slide-dots {
+    display:flex; gap:8px; margin-top:12px;
+    opacity:0; transition:opacity .8s 1s;
+  }
+  #together-section.show #slide-dots { opacity:1; }
+  .slide-dot {
+    width:8px; height:8px; border-radius:50%;
+    background:rgba(255,255,255,.35); cursor:pointer;
+    transition:background .3s, transform .3s;
+  }
+  .slide-dot.active { background:var(--gold); transform:scale(1.4); }
+
+  /* Close button */
+  #close-together {
+    position:absolute; top:20px; right:24px; z-index:10;
+    background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2);
+    color:#fff; font-size:1.1rem; padding:7px 15px; border-radius:30px;
+    cursor:pointer; font-family:'Cormorant Garamond',serif;
+    backdrop-filter:blur(8px); transition:background .3s;
+  }
+  #close-together:hover { background:rgba(255,255,255,.22); }
+
+  /* Music toggle inside together */
+  #together-music-btn {
+    position:absolute; top:20px; left:24px; z-index:10;
+    background:rgba(232,68,106,.2); border:1px solid rgba(232,68,106,.4);
+    color:var(--blush); font-size:1.3rem;
+    width:44px; height:44px; border-radius:50%;
+    cursor:pointer; backdrop-filter:blur(8px);
+    display:flex; align-items:center; justify-content:center;
+    transition:all .3s;
+  }
+  #together-music-btn:hover { background:rgba(232,68,106,.4); transform:scale(1.1); }
+  #together-music-btn.playing { animation:musicPulse 1s ease-in-out infinite; }
+  @keyframes musicPulse {
+    0%,100%{box-shadow:0 0 0 0 rgba(232,68,106,.4)}
+    50%{box-shadow:0 0 0 12px rgba(232,68,106,0)}
+  }
+
+  /* ── Orbiting hearts — centered on #heart-center ── */
+  #orbit-ring {
+    position:absolute;
+    top:50%; left:50%;           /* center of #heart-center */
+    transform:translate(-50%,-50%);
+    width:0; height:0;
+    pointer-events:none;
+    z-index:2;
+  }
+  .orbit-heart {
+    position:absolute;
+    transition:none;
+  }
+  .orbit-heart img { width:100%; height:100%; object-fit:cover; }
+
+  /* ── Floating heart cloud ── */
+  #float-cloud {
+    position:fixed; top:0; left:0; width:100%; height:100%;
+    pointer-events:none; z-index:45; overflow:hidden;
+  }
+  .float-heart {
+    position:absolute; bottom:-100px;
+    animation:riseHeart linear infinite;
+    pointer-events:none;
+  }
+  @keyframes riseHeart {
+    0%   { transform:translateY(0) rotate(0deg) scale(1); opacity:.95; }
+    70%  { opacity:.7; }
+    100% { transform:translateY(-115vh) rotate(360deg) scale(.5); opacity:0; }
+  }
+
+  /* ── Music button (main) ── */
+  #music-btn {
+    position:fixed; bottom:24px; right:24px; z-index:100;
+    background:rgba(232,68,106,.25); border:1px solid rgba(232,68,106,.4);
+    color:var(--blush); font-size:1.5rem;
+    width:48px; height:48px; border-radius:50%; cursor:pointer;
+    backdrop-filter:blur(8px); transition:all .3s;
+    display:flex; align-items:center; justify-content:center;
+  }
+  #music-btn:hover { background:rgba(232,68,106,.4); transform:scale(1.1); }
+  #music-btn.playing { animation:musicPulse 1s ease-in-out infinite; }
+
+  @media(max-width:500px) {
+    #balloon-area { gap:20px; }
+    .balloon-hint { font-size:.9rem; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="petals-canvas"></canvas>
+<canvas id="sparkle-canvas"></canvas>
+<canvas id="particle-canvas"></canvas>
+<div id="float-cloud"></div>
+
+<!-- Main stage -->
+<div id="stage">
+  <div class="title-wrap">
+    <h1>Forever Starts Here</h1>
+    <p class="subtitle">✦ Cherishing the Day We Said Yes ✦</p>
+  </div>
+  <p id="instruction">✦ Click each heart to reveal your love ✦</p>
+
+  <div id="balloon-area">
+    <!-- His balloon -->
+    <div class="balloon-wrap" id="his-balloon" onclick="revealBalloon('his')">
+      <div class="heart-balloon">
+        <svg class="heart-svg" viewBox="0 0 200 190" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <clipPath id="hisClip">
+              <path d="M100,170 C60,145 10,115 10,70 C10,35 35,15 65,15 C80,15 92,22 100,32 C108,22 120,15 135,15 C165,15 190,35 190,70 C190,115 140,145 100,170 Z"/>
+            </clipPath>
+            <radialGradient id="hisGlow" cx="50%" cy="40%">
+              <stop offset="0%" stop-color="#ff8fab" stop-opacity=".6"/>
+              <stop offset="100%" stop-color="#8b1a3a" stop-opacity=".9"/>
+            </radialGradient>
+            <radialGradient id="hisShine" cx="35%" cy="30%">
+              <stop offset="0%" stop-color="#fff" stop-opacity=".4"/>
+              <stop offset="60%" stop-color="#fff" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <path d="M100,170 C60,145 10,115 10,70 C10,35 35,15 65,15 C80,15 92,22 100,32 C108,22 120,15 135,15 C165,15 190,35 190,70 C190,115 140,145 100,170 Z" fill="url(#hisGlow)" stroke="#d4af37" stroke-width="1.5"/>
+          <image id="his-photo" class="photo-reveal" href="" x="10" y="15" width="180" height="155" clip-path="url(#hisClip)" preserveAspectRatio="xMidYMid slice"/>
+          <path d="M100,170 C60,145 10,115 10,70 C10,35 35,15 65,15 C80,15 92,22 100,32 C108,22 120,15 135,15 C165,15 190,35 190,70 C190,115 140,145 100,170 Z" fill="rgba(139,26,58,0.2)" id="his-overlay"/>
+          <path d="M100,170 C60,145 10,115 10,70 C10,35 35,15 65,15 C80,15 92,22 100,32 C108,22 120,15 135,15 C165,15 190,35 190,70 C190,115 140,145 100,170 Z" fill="url(#hisShine)" class="heart-shimmer"/>
+          <circle cx="40" cy="50" r="3" fill="#fff" opacity=".6" class="heart-shimmer"/>
+          <circle cx="160" cy="60" r="2" fill="#d4af37" opacity=".8" class="heart-shimmer"/>
+        </svg>
+      </div>
+      <div class="string"></div>
+      <span class="balloon-hint" id="his-hint">~ Roshan ~</span>
+    </div>
+
+    <!-- Her balloon -->
+    <div class="balloon-wrap" id="her-balloon" onclick="revealBalloon('her')">
+      <div class="heart-balloon">
+        <svg class="heart-svg" viewBox="0 0 200 190" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <clipPath id="herClip">
+              <path d="M100,170 C60,145 10,115 10,70 C10,35 35,15 65,15 C80,15 92,22 100,32 C108,22 120,15 135,15 C165,15 190,35 190,70 C190,115 140,145 100,170 Z"/>
+            </clipPath>
+            <radialGradient id="herGlow" cx="50%" cy="40%">
+              <stop offset="0%" stop-color="#ffb3c6" stop-opacity=".6"/>
+              <stop offset="100%" stop-color="#c2185b" stop-opacity=".9"/>
+            </radialGradient>
+            <radialGradient id="herShine" cx="35%" cy="30%">
+              <stop offset="0%" stop-color="#fff" stop-opacity=".4"/>
+              <stop offset="60%" stop-color="#fff" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <path d="M100,170 C60,145 10,115 10,70 C10,35 35,15 65,15 C80,15 92,22 100,32 C108,22 120,15 135,15 C165,15 190,35 190,70 C190,115 140,145 100,170 Z" fill="url(#herGlow)" stroke="#d4af37" stroke-width="1.5"/>
+          <image id="her-photo" class="photo-reveal" href="" x="10" y="15" width="180" height="155" clip-path="url(#herClip)" preserveAspectRatio="xMidYMid slice"/>
+          <path d="M100,170 C60,145 10,115 10,70 C10,35 35,15 65,15 C80,15 92,22 100,32 C108,22 120,15 135,15 C165,15 190,35 190,70 C190,115 140,145 100,170 Z" fill="rgba(194,24,91,0.15)" id="her-overlay"/>
+          <path d="M100,170 C60,145 10,115 10,70 C10,35 35,15 65,15 C80,15 92,22 100,32 C108,22 120,15 135,15 C165,15 190,35 190,70 C190,115 140,145 100,170 Z" fill="url(#herShine)" class="heart-shimmer"/>
+          <circle cx="50" cy="55" r="3" fill="#fff" opacity=".6" class="heart-shimmer"/>
+          <circle cx="155" cy="45" r="2" fill="#d4af37" opacity=".8" class="heart-shimmer"/>
+        </svg>
+      </div>
+      <div class="string"></div>
+      <span class="balloon-hint" id="her-hint">~ Kajal ~</span>
+    </div>
+  </div>
+</div>
+
+<!-- Together overlay — opens automatically after merge -->
+<div id="together-section">
+  <button id="close-together" onclick="closeTogether()">✕ Close</button>
+  <button id="together-music-btn" onclick="toggleMusic()" title="Toggle Music">♪</button>
+
+  <!-- Everything centered inside this wrapper -->
+  <div id="heart-center">
+    <!-- Orbit ring anchored to center of this div -->
+    <div id="orbit-ring"></div>
+
+    <svg id="mega-heart" viewBox="0 0 400 380" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <clipPath id="megaClip">
+          <path d="M200,340 C120,290 20,230 20,140 C20,70 70,30 130,30 C160,30 184,44 200,64 C216,44 240,30 270,30 C330,30 380,70 380,140 C380,230 280,290 200,340 Z"/>
+        </clipPath>
+        <radialGradient id="megaGlow" cx="50%" cy="40%">
+          <stop offset="0%" stop-color="#ff8fab"/>
+          <stop offset="100%" stop-color="#8b1a3a"/>
+        </radialGradient>
+        <radialGradient id="megaShine" cx="35%" cy="30%">
+          <stop offset="0%" stop-color="#fff" stop-opacity=".25"/>
+          <stop offset="70%" stop-color="#fff" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <path d="M200,340 C120,290 20,230 20,140 C20,70 70,30 130,30 C160,30 184,44 200,64 C216,44 240,30 270,30 C330,30 380,70 380,140 C380,230 280,290 200,340 Z" fill="url(#megaGlow)" stroke="#d4af37" stroke-width="2"/>
+      <image id="together-photo" href="" x="20" y="30" width="360" height="310" clip-path="url(#megaClip)" preserveAspectRatio="xMidYMid slice"/>
+      <path d="M200,340 C120,290 20,230 20,140 C20,70 70,30 130,30 C160,30 184,44 200,64 C216,44 240,30 270,30 C330,30 380,70 380,140 C380,230 280,290 200,340 Z" fill="rgba(139,26,58,0.25)"/>
+      <path d="M200,340 C120,290 20,230 20,140 C20,70 70,30 130,30 C160,30 184,44 200,64 C216,44 240,30 270,30 C330,30 380,70 380,140 C380,230 280,290 200,340 Z" fill="url(#megaShine)"/>
+    </svg>
+
+    <div id="together-label">Forever &amp; Always ♡</div>
+    <div id="slide-dots"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MUSIC FILE: Put your downloaded music file in the same
+     folder as this HTML file, then set the src below.
+
+     Supported formats: .mp3  .ogg  .wav  .m4a  .aac
+
+     Example — if your file is called "romantic.mp3":
+       src="romantic.mp3"
+
+     Example — full path:
+       src="music/my_song.mp3"
+══════════════════════════════════════════════════════════ -->
+<audio id="bg-music" loop preload="auto">
+  <source src="music.mp3" type="audio/mpeg">
+  <source src="YOUR_MUSIC_FILE.ogg" type="audio/ogg">
+</audio>
+
+<!-- Main music btn (balloon phase) -->
+<button id="music-btn" onclick="toggleMusic()" title="Toggle Music">♪</button>
+
+<script>
+// ═══════════════════════════════════════════════════
+// CONFIG — replace placeholder URLs with real photos
+// ═══════════════════════════════════════════════════
+const CONFIG = {
+  
+  // YOUR photo (shown in left balloon)
+  hisPhoto: 'me.jpg',
+
+  // WIFE'S photo (shown in right balloon)
+  herPhoto: 'wife.jpg',
+
+  // BIG center heart photos (one chosen randomly)
+  bigPhotos: [
+    'big/1.jpg',
+    'big/2.jpg',
+    'big/3.jpg',
+    'big/4.jpg',
+    'big/5.jpg',
+    'big/6.jpg'
+  ],
+
+  // 4 orbiting heart photos
+  mediumPhotos: [
+    'medium/1.jpg',
+    'medium/2.jpg',
+    'medium/3.jpg',
+    'medium/4.jpg',
+    'medium/5.jpg',
+    'medium/6.jpg',
+    'medium/7.jpg'
+  ],
+
+  // Many small balloon photos for the floating cloud
+  smallPhotos: [
+    'small/1.jpg',
+    'small/2.jpg',
+    'small/3.jpg',
+    'small/4.jpg',
+    'small/5.jpg',
+    'small/6.jpg',
+    'small/7.jpg'
+  ],
+
+};
+// ═══════════════════════════════════════════════════
+
+let hisRevealed = false, herRevealed = false, togetherOpen = false;
+let floatInterval = null, orbitAngle = 0, orbitRAF = null;
+let slideIdx = 0, slideTimer = null;
+
+// ─── Balloon reveal ───
+function revealBalloon(who) {
+  if (who === 'his' && !hisRevealed) {
+    hisRevealed = true;
+    const img = document.getElementById('his-photo');
+    img.setAttribute('href', CONFIG.hisPhoto);
+    img.classList.add('visible');
+    document.getElementById('his-overlay').style.opacity = '0.05';
+    document.getElementById('his-hint').textContent = '~ You ~';
+    burstSparkles(document.getElementById('his-balloon'));
+    playPopSound();
+    checkBothRevealed();
+  } else if (who === 'her' && !herRevealed) {
+    herRevealed = true;
+    const img = document.getElementById('her-photo');
+    img.setAttribute('href', CONFIG.herPhoto);
+    img.classList.add('visible');
+    document.getElementById('her-overlay').style.opacity = '0.05';
+    document.getElementById('her-hint').textContent = '~ Her ~';
+    burstSparkles(document.getElementById('her-balloon'));
+    playPopSound();
+    checkBothRevealed();
+  }
+}
+
+function checkBothRevealed() {
+  if (hisRevealed && herRevealed) {
+    document.getElementById('instruction').style.opacity = '0';
+    setTimeout(startMerge, 700);
+  }
+}
+
+// ─── Merge animation ───
+function startMerge() {
+  document.getElementById('balloon-area').classList.add('merging');
+  const his = document.getElementById('his-balloon');
+  const her = document.getElementById('her-balloon');
+  const t = 'transform 1.5s cubic-bezier(.4,0,.2,1), opacity 1s .5s';
+  his.style.transition = t; her.style.transition = t;
+  his.style.transform = 'translateX(60px) scale(.85)';
+  her.style.transform = 'translateX(-60px) scale(.85)';
+
+  setTimeout(() => {
+    his.style.transform = 'translate(70px,-220px) scale(.3) rotate(-30deg)';
+    her.style.transform = 'translate(-70px,-220px) scale(.3) rotate(30deg)';
+    his.style.opacity = '0'; her.style.opacity = '0';
+  }, 900);
+
+  setTimeout(() => {
+    startFloatCloud();
+    heartExplosion();
+    // Auto-open together section
+    setTimeout(openTogether, 600);
+  }, 2000);
+}
+
+// ─── Together overlay — opens automatically ───
+function openTogether() {
+  togetherOpen = true;
+  const sec = document.getElementById('together-section');
+  sec.classList.add('show');
+
+  // Build slideshow dots
+  buildSlideDots();
+  // Show first big photo
+  showSlide(0);
+  // Auto-cycle slideshow every 4s
+  slideTimer = setInterval(() => {
+    slideIdx = (slideIdx + 1) % CONFIG.bigPhotos.length;
+    showSlide(slideIdx);
+  }, 4000);
+
+  buildOrbitHearts();
+  if (!orbitRAF) animateOrbit();
+
+  // Auto-start music
+  if (!musicPlaying) startMusic();
+}
+
+function closeTogether() {
+  togetherOpen = false;
+  document.getElementById('together-section').classList.remove('show');
+  if (slideTimer) { clearInterval(slideTimer); slideTimer = null; }
+}
+
+// ─── Slideshow ───
+function buildSlideDots() {
+  const dots = document.getElementById('slide-dots');
+  dots.innerHTML = '';
+  CONFIG.bigPhotos.forEach((_, i) => {
+    const d = document.createElement('span');
+    d.className = 'slide-dot' + (i === 0 ? ' active' : '');
+    d.onclick = () => { slideIdx = i; showSlide(i); };
+    dots.appendChild(d);
+  });
+}
+
+function showSlide(idx) {
+  const ph = CONFIG.bigPhotos[idx];
+  const img = document.getElementById('together-photo');
+  // Fade out, swap, fade in via animation on the SVG image
+  img.style.transition = 'opacity .5s';
+  img.style.opacity = '0';
+  setTimeout(() => {
+    img.setAttribute('href', ph);
+    img.style.opacity = '1';
+  }, 500);
+  // Update dots
+  document.querySelectorAll('.slide-dot').forEach((d, i) => {
+    d.classList.toggle('active', i === idx);
+  });
+}
+
+// ─── Orbit hearts ───
+function buildOrbitHearts() {
+  const ring = document.getElementById('orbit-ring');
+  ring.innerHTML = '';
+  CONFIG.mediumPhotos.forEach((src, i) => {
+    const div = document.createElement('div');
+    div.className = 'orbit-heart';
+    div.id = 'orbit-' + i;
+    // Heart-shaped clip via inline SVG mask
+    div.innerHTML = `
+      <svg width="80" height="76" viewBox="0 0 100 95" xmlns="http://www.w3.org/2000/svg" style="display:block;">
+        <defs>
+          <clipPath id="oClip${i}">
+            <path d="M50,85 C30,72 5,58 5,35 C5,18 18,8 33,8 C40,8 46,11 50,16 C54,11 60,8 67,8 C82,8 95,18 95,35 C95,58 70,72 50,85 Z"/>
+          </clipPath>
+        </defs>
+        <path d="M50,85 C30,72 5,58 5,35 C5,18 18,8 33,8 C40,8 46,11 50,16 C54,11 60,8 67,8 C82,8 95,18 95,35 C95,58 70,72 50,85 Z" fill="rgba(232,68,106,0.6)" stroke="#d4af37" stroke-width="1.5"/>
+        <image href="${src}" x="5" y="8" width="90" height="77" clip-path="url(#oClip${i})" preserveAspectRatio="xMidYMid slice"/>
+        <path d="M50,85 C30,72 5,58 5,35 C5,18 18,8 33,8 C40,8 46,11 50,16 C54,11 60,8 67,8 C82,8 95,18 95,35 C95,58 70,72 50,85 Z" fill="rgba(255,255,255,.1)"/>
+      </svg>`;
+    ring.appendChild(div);
+  });
+}
+
+function animateOrbit() {
+  if (!togetherOpen) { orbitRAF = null; return; }
+  orbitAngle += 0.4;
+  const n = CONFIG.mediumPhotos.length;
+  const r = Math.min(window.innerWidth, window.innerHeight) * 0.32;
+  for (let i = 0; i < n; i++) {
+    const el = document.getElementById('orbit-' + i);
+    if (!el) continue;
+    const a = (orbitAngle + (360 / n) * i) * Math.PI / 180;
+    const x = Math.cos(a) * r;
+    const y = Math.sin(a) * r * 0.5;
+    const scale = 0.7 + (Math.sin(a) + 1) * 0.2;
+    const op = 0.5 + (Math.sin(a) + 1) * 0.25;
+    el.style.cssText = `
+      position:absolute;
+      left:${x}px; top:${y}px;
+      transform:translate(-50%,-50%) scale(${scale});
+      opacity:${op};
+      z-index:${Math.round(y + 200)};
+    `;
+  }
+  orbitRAF = requestAnimationFrame(animateOrbit);
+}
+
+// ─── Floating heart cloud with PHOTOS inside each heart ───
+function startFloatCloud() {
+  if (floatInterval) return;
+  for (let i = 0; i < 5; i++) setTimeout(spawnFloatHeart, i * 300);
+  floatInterval = setInterval(spawnFloatHeart, 550);
+}
+
+let floatIdCounter = 0;
+function spawnFloatHeart() {
+  const cloud = document.getElementById('float-cloud');
+  const src = CONFIG.smallPhotos[Math.floor(Math.random() * CONFIG.smallPhotos.length)];
+  const size = 50 + Math.random() * 60;
+  const x = 3 + Math.random() * 94;
+  const dur = 7 + Math.random() * 7;
+  const delay = Math.random() * 1.5;
+  const uid = 'fh' + (floatIdCounter++);
+  const colors = ['#e8446a','#c2185b','#ff6b9d','#ad1457','#f06292','#d4af37'];
+  const hc = colors[Math.floor(Math.random() * colors.length)];
+
+  const div = document.createElement('div');
+  div.className = 'float-heart';
+  div.style.cssText = `left:${x}%;animation-duration:${dur}s;animation-delay:${delay}s;`;
+
+  // Each floating heart: coloured heart shape + photo clipped inside it
+  div.innerHTML = `
+    <svg width="${size}" height="${size * 0.95}" viewBox="0 0 100 95" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <clipPath id="${uid}">
+          <path d="M50,85 C30,72 5,58 5,35 C5,18 18,8 33,8 C40,8 46,11 50,16 C54,11 60,8 67,8 C82,8 95,18 95,35 C95,58 70,72 50,85 Z"/>
+        </clipPath>
+      </defs>
+      <!-- Heart base colour -->
+      <path d="M50,85 C30,72 5,58 5,35 C5,18 18,8 33,8 C40,8 46,11 50,16 C54,11 60,8 67,8 C82,8 95,18 95,35 C95,58 70,72 50,85 Z"
+            fill="${hc}" opacity=".9"/>
+      <!-- Photo clipped to heart -->
+      <image href="${src}" x="5" y="8" width="90" height="77"
+             clip-path="url(#${uid})" preserveAspectRatio="xMidYMid slice"/>
+      <!-- Shine overlay -->
+      <path d="M50,85 C30,72 5,58 5,35 C5,18 18,8 33,8 C40,8 46,11 50,16 C54,11 60,8 67,8 C82,8 95,18 95,35 C95,58 70,72 50,85 Z"
+            fill="rgba(255,255,255,.12)"/>
+    </svg>`;
+  cloud.appendChild(div);
+  setTimeout(() => div.remove(), (dur + delay + 2) * 1000);
+}
+
+// ─── Heart explosion on merge ───
+function heartExplosion() {
+  for (let i = 0; i < 20; i++) setTimeout(spawnExplosionHeart, i * 70);
+}
+function spawnExplosionHeart() {
+  const el = document.createElement('div');
+  const size = 18 + Math.random() * 38;
+  const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+  const vx = (Math.random() - .5) * 7, vy = -3 - Math.random() * 6;
+  const hc = ['#e8446a','#c2185b','#ff6b9d','#d4af37','#f06292'][Math.floor(Math.random()*5)];
+  el.style.cssText = `position:fixed;left:${cx}px;top:${cy}px;pointer-events:none;z-index:80;font-size:${size}px;color:${hc};`;
+  el.textContent = '♥';
+  document.body.appendChild(el);
+  let t = 0, x = cx, y = cy, vvy = vy, vvx = vx;
+  const go = () => {
+    t++; vvy += .14; x += vvx; y += vvy;
+    el.style.left = x+'px'; el.style.top = y+'px';
+    el.style.opacity = Math.max(0, 1 - t/55);
+    if (t < 55) requestAnimationFrame(go); else el.remove();
+  };
+  requestAnimationFrame(go);
+}
+
+// ─── Sparkle burst on click ───
+function burstSparkles(target) {
+  const rect = target.getBoundingClientRect();
+  const cx = rect.left + rect.width/2, cy = rect.top + rect.height/2;
+  for (let i = 0; i < 24; i++) {
+    const el = document.createElement('div');
+    const angle = (360/24)*i, dist = 40 + Math.random()*80;
+    const rad = angle*Math.PI/180;
+    const tx = Math.cos(rad)*dist, ty = Math.sin(rad)*dist;
+    const sz = 4 + Math.random()*6;
+    const hue = Math.random()>.5 ? '#d4af37' : '#e8446a';
+    el.style.cssText = `position:fixed;left:${cx}px;top:${cy}px;width:${sz}px;height:${sz}px;border-radius:50%;background:${hue};pointer-events:none;z-index:999;transition:transform .8s ease-out,opacity .8s ease-out;box-shadow:0 0 4px ${hue};`;
+    document.body.appendChild(el);
+    requestAnimationFrame(() => { el.style.transform=`translate(${tx}px,${ty}px) scale(0)`; el.style.opacity='0'; });
+    setTimeout(() => el.remove(), 900);
+  }
+}
+
+// ══════════════════════════
+// CANVAS: Twinkle sparkles
+// ══════════════════════════
+const sparkCanvas = document.getElementById('sparkle-canvas');
+const sparkCtx = sparkCanvas.getContext('2d');
+let sparks = [];
+function resizeSpark(){ sparkCanvas.width=innerWidth; sparkCanvas.height=innerHeight; }
+resizeSpark(); addEventListener('resize', resizeSpark);
+for(let i=0;i<90;i++) sparks.push({ x:Math.random()*innerWidth, y:Math.random()*innerHeight, r:.5+Math.random()*2, alpha:Math.random(), da:(.01+Math.random()*.02)*(Math.random()>.5?1:-1), speed:.2+Math.random()*.5, color:Math.random()>.5?'#d4af37':'#f7a8b8' });
+function drawSparks(){
+  sparkCtx.clearRect(0,0,sparkCanvas.width,sparkCanvas.height);
+  sparks.forEach(s=>{
+    s.alpha+=s.da; if(s.alpha>1||s.alpha<0)s.da*=-1;
+    s.y-=s.speed*.12; if(s.y<0)s.y=sparkCanvas.height;
+    sparkCtx.globalAlpha=s.alpha;
+    sparkCtx.beginPath(); sparkCtx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    sparkCtx.fillStyle=s.color; sparkCtx.fill();
+    sparkCtx.strokeStyle=s.color; sparkCtx.lineWidth=.5;
+    sparkCtx.globalAlpha=s.alpha*.4;
+    sparkCtx.beginPath();
+    sparkCtx.moveTo(s.x-s.r*2.5,s.y); sparkCtx.lineTo(s.x+s.r*2.5,s.y);
+    sparkCtx.moveTo(s.x,s.y-s.r*2.5); sparkCtx.lineTo(s.x,s.y+s.r*2.5);
+    sparkCtx.stroke(); sparkCtx.globalAlpha=1;
+  });
+  requestAnimationFrame(drawSparks);
+}
+drawSparks();
+
+// ══════════════════════════
+// CANVAS: Rose petals
+// ══════════════════════════
+const petalCanvas = document.getElementById('petals-canvas');
+const petalCtx = petalCanvas.getContext('2d');
+let petals = [];
+function resizePetal(){ petalCanvas.width=innerWidth; petalCanvas.height=innerHeight; }
+resizePetal(); addEventListener('resize', resizePetal);
+function mkPetal(){ return { x:Math.random()*petalCanvas.width, y:-20, size:7+Math.random()*13, sy:.35+Math.random()*.7, sx:-.3+Math.random()*.6, rot:Math.random()*Math.PI*2, rs:(Math.random()-.5)*.04, alpha:.6+Math.random()*.4, hue:Math.random()>.5?'#e8446a':'#f7a8b8' }; }
+for(let i=0;i<28;i++){ const p=mkPetal(); p.y=Math.random()*petalCanvas.height; petals.push(p); }
+function drawPetals(){
+  petalCtx.clearRect(0,0,petalCanvas.width,petalCanvas.height);
+  petals.forEach((p,i)=>{
+    p.y+=p.sy; p.x+=p.sx+Math.sin(p.y*.01)*.3; p.rot+=p.rs;
+    if(p.y>petalCanvas.height+30) petals[i]=mkPetal();
+    petalCtx.save(); petalCtx.translate(p.x,p.y); petalCtx.rotate(p.rot);
+    petalCtx.globalAlpha=p.alpha; petalCtx.fillStyle=p.hue;
+    petalCtx.beginPath(); petalCtx.ellipse(0,0,p.size*.42,p.size,0,0,Math.PI*2); petalCtx.fill();
+    petalCtx.restore();
+  });
+  requestAnimationFrame(drawPetals);
+}
+drawPetals();
+
+// ══════════════════════════
+// CANVAS: Mouse heart trail
+// ══════════════════════════
+const partCanvas = document.getElementById('particle-canvas');
+const partCtx = partCanvas.getContext('2d');
+let particles = [];
+function resizePart(){ partCanvas.width=innerWidth; partCanvas.height=innerHeight; }
+resizePart(); addEventListener('resize',resizePart);
+document.addEventListener('mousemove', e=>{
+  if(Math.random()>.5) return;
+  particles.push({ x:e.clientX, y:e.clientY, vx:(Math.random()-.5)*1.5, vy:-1-Math.random()*2, size:5+Math.random()*10, alpha:.8, color:['#e8446a','#d4af37','#f7a8b8','#ff8fab'][Math.floor(Math.random()*4)] });
+});
+function drawParticles(){
+  partCtx.clearRect(0,0,partCanvas.width,partCanvas.height);
+  particles=particles.filter(p=>p.alpha>.01);
+  particles.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.vy+=.06; p.alpha-=.017; partCtx.save(); partCtx.globalAlpha=p.alpha; partCtx.fillStyle=p.color; partCtx.font=`${p.size}px serif`; partCtx.fillText('♥',p.x,p.y); partCtx.restore(); });
+  requestAnimationFrame(drawParticles);
+}
+drawParticles();
+
+// ══════════════════════════════════════════════════
+// MUSIC — uses your file if set, else synth fallback
+// ══════════════════════════════════════════════════
+const bgMusic = document.getElementById('bg-music');
+// Detect if a real music file is wired up
+const hasMusicFile = bgMusic.querySelector('source') &&
+  !bgMusic.querySelector('source').src.includes('YOUR_MUSIC_FILE');
+
+let audioCtx = null, musicPlaying = false;
+let gainNode = null, masterOsc = [], sweepTimer = null, melTimer = null;
+
+const MELODY = [
+  261.63, 329.63, 392.00, 523.25,
+  349.23, 440.00, 523.25, 659.25,
+  392.00, 493.88, 587.33, 783.99,
+  349.23, 440.00, 392.00, 329.63,
+];
+let melIdx = 0;
+
+function startMusic() {
+  if (musicPlaying) return;
+  musicPlaying = true;
+  updateMusicBtns();
+
+  if (hasMusicFile) {
+    // ── Real audio file ──
+    bgMusic.volume = 0;
+    bgMusic.play().catch(() => {});
+    // Fade in
+    let vol = 0;
+    const fade = setInterval(() => {
+      vol = Math.min(1, vol + 0.02);
+      bgMusic.volume = vol;
+      if (vol >= 1) clearInterval(fade);
+    }, 60);
+  } else {
+    // ── Synth fallback ──
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    gainNode = audioCtx.createGain();
+    gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+    gainNode.gain.linearRampToValueAtTime(0.07, audioCtx.currentTime + 1.5);
+
+    const reverb = audioCtx.createConvolver();
+    const buf = audioCtx.createBuffer(2, audioCtx.sampleRate * 2.5, audioCtx.sampleRate);
+    for (let c=0;c<2;c++){ const d=buf.getChannelData(c); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2.5); }
+    reverb.buffer = buf;
+    gainNode.connect(reverb); gainNode.connect(audioCtx.destination);
+    reverb.connect(audioCtx.destination);
+
+    const pad = audioCtx.createOscillator();
+    const padG = audioCtx.createGain();
+    pad.type = 'triangle'; pad.frequency.value = 130.81; padG.gain.value = 0.022;
+    pad.connect(padG); padG.connect(gainNode); pad.start(); masterOsc.push(pad);
+
+    function playNote() {
+      if (!musicPlaying) return;
+      const freq = MELODY[melIdx % MELODY.length]; melIdx++;
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = 'sine'; o.frequency.value = freq;
+      g.gain.setValueAtTime(0, audioCtx.currentTime);
+      g.gain.linearRampToValueAtTime(0.06, audioCtx.currentTime + 0.05);
+      g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.55);
+      o.connect(g); g.connect(gainNode);
+      o.start(); o.stop(audioCtx.currentTime + 0.6);
+      melTimer = setTimeout(playNote, 320);
+    }
+    playNote();
+  }
+}
+
+function stopMusic() {
+  musicPlaying = false;
+  updateMusicBtns();
+  if (hasMusicFile) {
+    let vol = bgMusic.volume;
+    const fade = setInterval(() => {
+      vol = Math.max(0, vol - 0.03);
+      bgMusic.volume = vol;
+      if (vol <= 0) { bgMusic.pause(); clearInterval(fade); }
+    }, 60);
+  } else {
+    if (gainNode) gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.8);
+    if (melTimer) { clearTimeout(melTimer); melTimer = null; }
+    setTimeout(() => { masterOsc.forEach(o=>{ try{o.stop();}catch(e){} }); masterOsc=[]; }, 900);
+  }
+}
+
+function toggleMusic() {
+  musicPlaying ? stopMusic() : startMusic();
+}
+
+function updateMusicBtns() {
+  ['music-btn','together-music-btn'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.textContent = musicPlaying ? '♫' : '♪';
+    btn.classList.toggle('playing', musicPlaying);
+  });
+}
+
+function playPopSound() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(900, audioCtx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(280, audioCtx.currentTime + .35);
+    g.gain.setValueAtTime(.22, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001, audioCtx.currentTime + .4);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + .4);
+  } catch(e){}
+}
+</script>
+</body>
+</html>
